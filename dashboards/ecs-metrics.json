@@ -1,0 +1,738 @@
+{
+  "title": "ECS Container Metrics",
+  "uid": "ecs-container-metrics",
+  "description": "ECS Task metrics collected via Alloy otelcol.receiver.awsecscontainermetrics → Mimir",
+  "tags": ["ecs", "aws", "containers", "mimir", "alloy"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "label": "Datasource",
+        "pluginId": "prometheus",
+        "refresh": 1,
+        "hide": 0,
+        "current": {}
+      },
+      {
+        "name": "cluster",
+        "type": "query",
+        "label": "Cluster",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(ecs_task_memory_usage_Bytes, cluster)",
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "current": {},
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*"
+      },
+      {
+        "name": "task_family",
+        "type": "query",
+        "label": "Task Family",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(ecs_task_memory_usage_Bytes{cluster=~\"$cluster\"}, task_family)",
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "current": {},
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*"
+      },
+      {
+        "name": "availability_zone",
+        "type": "query",
+        "label": "AZ",
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "query": "label_values(ecs_task_memory_usage_Bytes{cluster=~\"$cluster\"}, availability_zone)",
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "current": {},
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "📊 Overview",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Running Tasks",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "count(count by (task_id) (ecs_task_memory_usage_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"}))",
+          "legendFormat": "Tasks",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Memory Usage",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1073741824 },
+              { "color": "red", "value": 2147483648 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(ecs_task_memory_usage_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Total Memory",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total CPU Usage (cores)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 4 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(ecs_task_cpu_cores_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "CPU Cores",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Network RX Rate",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(ecs_task_network_rate_rx_Bytes_per_Second{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "RX Rate",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Network TX Rate",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "purple", "value": null }]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum(ecs_task_network_rate_tx_Bytes_per_Second{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "TX Rate",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Memory Utilisation %",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 20, "y": 1, "w": 4, "h": 4 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "avg(ecs_task_memory_utilized_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\"} / ecs_task_memory_reserved_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\"} * 100)",
+          "legendFormat": "Mem %",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "🧠 Memory",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Memory Usage by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_memory_usage_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\", availability_zone=~\"$availability_zone\"})",
+          "legendFormat": "{{ task_family }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Memory Utilisation % by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_memory_utilized_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\", availability_zone=~\"$availability_zone\"}) / sum by (task_family) (ecs_task_memory_reserved_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\", availability_zone=~\"$availability_zone\"}) * 100",
+          "legendFormat": "{{ task_family }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Memory Reserved vs Used",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decmbytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_memory_reserved_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Reserved - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_memory_utilized_Megabytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Used - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Memory Usage Max (Bytes)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_memory_usage_max_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "{{ task_family }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "⚙️ CPU",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "CPU Utilisation % by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 23, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_cpu_utilized_None{cluster=~\"$cluster\", task_family=~\"$task_family\", availability_zone=~\"$availability_zone\"})",
+          "legendFormat": "{{ task_family }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "CPU Usage Total (Nanoseconds rate)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 23, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ns",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_cpu_usage_total_Nanoseconds{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "Total - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_cpu_usage_usermode_Nanoseconds{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "User - {{ task_family }}",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_cpu_usage_kernelmode_Nanoseconds{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "Kernel - {{ task_family }}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "CPU Reserved (vCPU) vs Online CPUs",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 31, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_cpu_reserved_None{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Reserved - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_cpu_onlines_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Online - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "CPU Usage vCPU by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 31, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_cpu_usage_vcpu_vCPU{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "{{ task_family }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "🌐 Network",
+      "gridPos": { "x": 0, "y": 39, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Network RX/TX Rate by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_network_rate_rx_Bytes_per_Second{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "RX - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_network_rate_tx_Bytes_per_Second{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "TX - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "Network Total Bytes RX/TX",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_network_io_usage_rx_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "RX - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_network_io_usage_tx_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "TX - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "Network Packets RX/TX",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 48, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_rx_packets_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "RX Packets - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_tx_packets_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "TX Packets - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Network Errors & Drops",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 48, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_rx_errors_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "RX Errors - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_tx_errors_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "TX Errors - {{ task_family }}",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_rx_dropped_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "RX Drops - {{ task_family }}",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_network_io_usage_tx_dropped_Count{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "TX Drops - {{ task_family }}",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "💾 Storage",
+      "gridPos": { "x": 0, "y": 56, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Storage Read/Write Rate by Task Family",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 0, "y": 57, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_storage_read_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "Read - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (rate(ecs_task_storage_write_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"}[5m]))",
+          "legendFormat": "Write - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Storage Cumulative Read/Write",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "x": 12, "y": 57, "w": 12, "h": 8 },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_storage_read_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Read - {{ task_family }}",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (task_family) (ecs_task_storage_write_bytes_Bytes{cluster=~\"$cluster\", task_family=~\"$task_family\"})",
+          "legendFormat": "Write - {{ task_family }}",
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}
