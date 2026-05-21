@@ -15,6 +15,7 @@
         "type": "datasource",
         "label": "Datasource",
         "pluginId": "prometheus",
+        "query": "prometheus",
         "refresh": 1,
         "hide": 0,
         "current": {}
